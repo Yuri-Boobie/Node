@@ -1,0 +1,16 @@
+{
+  "name": "node-database",
+  "version": "1.0.0",
+  "description": "Aplicação Node.js com banco de dados SQLite",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "keywords": ["database", "sqlite"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "sqlite3": "^5.1.6"
+  }
+}
