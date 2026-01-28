@@ -13,20 +13,39 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// Criar tabela de usuários (exemplo)
-db.run(`
-  CREATE TABLE IF NOT EXISTS usuarios (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`, (err) => {
-  if (err) {
-    console.error('Erro ao criar tabela:', err.message);
-  } else {
-    console.log('✓ Tabela de usuários pronta');
-  }
+// Executar operações serialmente para garantir ordem
+db.serialize(() => {
+  // Criar tabela de usuários (exemplo)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Erro ao criar tabela:', err.message);
+    } else {
+      console.log('✓ Tabela de usuários pronta');
+    }
+  });
+
+  // Criar tabela de tarefas
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tarefas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      titulo TEXT NOT NULL,
+      concluida INTEGER DEFAULT 0,
+      criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Erro ao criar tabela de tarefas:', err.message);
+    } else {
+      console.log('✓ Tabela de tarefas pronta');
+    }
+  });
 });
 
 // Funções para operações do banco de dados
@@ -88,6 +107,60 @@ module.exports = {
   // Deletar usuário
   deletarUsuario: (id, callback) => {
     db.run('DELETE FROM usuarios WHERE id = ?', [id], function(err) {
+      if (err) {
+        callback(err, null);
+      } else {
+        callback(null, { deleted: this.changes });
+      }
+    });
+  },
+
+  // ===== FUNÇÕES DE TAREFAS =====
+
+  // Inserir uma tarefa
+  inserirTarefa: (titulo, callback) => {
+    db.run(
+      'INSERT INTO tarefas (titulo, concluida) VALUES (?, ?)',
+      [titulo, 0],
+      function(err) {
+        if (err) {
+          callback(err, null);
+        } else {
+          callback(null, { id: this.lastID, titulo, concluida: false });
+        }
+      }
+    );
+  },
+
+  // Obter todas as tarefas
+  obterTarefas: (callback) => {
+    db.all('SELECT * FROM tarefas ORDER BY criado_em DESC', [], (err, rows) => {
+      if (err) {
+        callback(err, null);
+      } else {
+        callback(null, rows);
+      }
+    });
+  },
+
+  // Marcar tarefa como concluída
+  concluirTarefa: (id, callback) => {
+    db.run(
+      'UPDATE tarefas SET concluida = 1 WHERE id = ?',
+      [id],
+      function(err) {
+        if (err) {
+          callback(err, null);
+        } else {
+          callback(null, { updated: this.changes });
+        }
+      }
+    );
+  },
+
+  // Deletar tarefa
+  deletarTarefa: (id, callback) => {
+    db.run('DELETE FROM tarefas WHERE id = ?', [id], function(err) {
       if (err) {
         callback(err, null);
       } else {
